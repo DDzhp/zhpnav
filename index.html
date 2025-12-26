@@ -508,9 +508,6 @@
         // 配置参数
         const ADMIN_USERNAME = 'ylxx';
         const ADMIN_PASSWORD = 'chenjiaxu110,';
-        const GIST_ID = 'zhpnav'; // 替换为你的GitHub Gist ID
-        const GITHUB_TOKEN = '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'; // 替换为你的GitHub Personal Access Token
-        const GIST_FILE_NAME = 'navigator-data.json';
         
         // 全局变量
         let isLoggedIn = false;
@@ -538,47 +535,15 @@
             ]
         };
         
-        // 从云端获取数据
-        async function fetchDataFromCloud() {
-            try {
-                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
-                if (response.ok) {
-                    const gist = await response.json();
-                    if (gist.files && gist.files[GIST_FILE_NAME]) {
-                        return JSON.parse(gist.files[GIST_FILE_NAME].content);
-                    }
-                }
-                // 如果获取失败，返回默认数据
-                console.log('使用默认数据');
-                return defaultUrls;
-            } catch (error) {
-                console.error('获取云端数据失败:', error);
-                return defaultUrls;
-            }
+        // 从localStorage获取数据，如果没有则使用默认数据
+        function getDataFromLocal() {
+            const storedUrls = localStorage.getItem('navigatorUrls');
+            return storedUrls ? JSON.parse(storedUrls) : defaultUrls;
         }
         
-        // 保存数据到云端
-        async function saveDataToCloud(data) {
-            try {
-                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `token ${GITHUB_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        files: {
-                            [GIST_FILE_NAME]: {
-                                content: JSON.stringify(data, null, 2)
-                            }
-                        }
-                    })
-                });
-                return response.ok;
-            } catch (error) {
-                console.error('保存数据到云端失败:', error);
-                return false;
-            }
+        // 保存数据到localStorage
+        function saveDataToLocal(data) {
+            localStorage.setItem('navigatorUrls', JSON.stringify(data));
         }
         
         // 渲染网址列表
@@ -621,18 +586,14 @@
         }
         
         // 删除网址
-        async function deleteUrl(tabId, urlLink) {
+        function deleteUrl(tabId, urlLink) {
             if (!isLoggedIn) return;
             
             if (confirm('确定要删除这个网址吗？')) {
                 currentUrls[tabId] = currentUrls[tabId].filter(url => url.link !== urlLink);
-                const success = await saveDataToCloud(currentUrls);
-                if (success) {
-                    renderUrlList(tabId);
-                    alert('删除成功！');
-                } else {
-                    alert('删除失败，请重试！');
-                }
+                saveDataToLocal(currentUrls);
+                renderUrlList(tabId);
+                alert('删除成功！');
             }
         }
         
@@ -642,13 +603,13 @@
         }
         
         // 页面加载完成后初始化
-        $(document).ready(async function() {
+        $(document).ready(function() {
             // 检查登录状态
             isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             updateLoginStatus();
             
-            // 从云端获取数据
-            currentUrls = await fetchDataFromCloud();
+            // 从localStorage获取数据
+            currentUrls = getDataFromLocal();
             
             // 渲染所有标签页的网址列表
             for (let i = 1; i <= 4; i++) {
@@ -685,6 +646,7 @@
         const loginForm = document.getElementById('loginForm');
         
         function openLoginModal() {
+            console.log('打开登录模态框');
             loginModal.style.display = 'block';
         }
         
@@ -695,13 +657,14 @@
         
         loginCloseBtn.onclick = closeLoginModal;
         
-        window.onclick = function(event) {
+        // 修复点击事件委托
+        document.addEventListener('click', function(event) {
             if (event.target === loginModal) {
                 closeLoginModal();
             } else if (event.target === modal) {
                 closeAddModal();
             }
-        };
+        });
         
         // 登录功能
         loginForm.onsubmit = function(e) {
@@ -761,7 +724,7 @@
         closeBtn.onclick = closeAddModal;
         
         // 添加网址功能
-        addUrlForm.onsubmit = async function(e) {
+        addUrlForm.onsubmit = function(e) {
             e.preventDefault();
             
             if (!isLoggedIn) return;
@@ -777,17 +740,15 @@
             }
             currentUrls[tabId].push({ name: urlName, desc: urlDesc, link: urlLink });
             
-            // 保存到云端
-            const success = await saveDataToCloud(currentUrls);
-            if (success) {
-                // 重新渲染列表
-                renderUrlList(tabId);
-                // 关闭模态框
-                closeAddModal();
-                alert('添加成功！');
-            } else {
-                alert('添加失败，请重试！');
-            }
+            // 保存到localStorage
+            saveDataToLocal(currentUrls);
+            
+            // 重新渲染列表
+            renderUrlList(tabId);
+            
+            // 关闭模态框
+            closeAddModal();
+            alert('添加成功！');
         };
     </script>
 </body>
