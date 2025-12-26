@@ -640,53 +640,62 @@
             }
         }
         
-        // 登录模态框控制
-        const loginModal = document.getElementById('loginModal');
-        const loginCloseBtn = loginModal.querySelector('.close');
-        const loginForm = document.getElementById('loginForm');
+        // 登录模态框相关变量
+        let loginModal, loginCloseBtn, loginForm;
         
+        // 登录模态框控制函数
         function openLoginModal() {
             console.log('打开登录模态框');
+            // 确保DOM已加载
+            if (!loginModal) {
+                loginModal = document.getElementById('loginModal');
+                loginCloseBtn = loginModal.querySelector('.close');
+                loginForm = document.getElementById('loginForm');
+                
+                // 绑定关闭事件
+                loginCloseBtn.onclick = closeLoginModal;
+                
+                // 绑定表单提交事件
+                loginForm.onsubmit = function(e) {
+                    e.preventDefault();
+                    
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    
+                    if (login(username, password)) {
+                        isLoggedIn = true;
+                        localStorage.setItem('isLoggedIn', 'true');
+                        updateLoginStatus();
+                        closeLoginModal();
+                        // 重新渲染所有列表，显示操作按钮
+                        for (let i = 1; i <= 4; i++) {
+                            renderUrlList(`tab${i}`);
+                        }
+                        alert('登录成功！');
+                    } else {
+                        alert('用户名或密码错误！');
+                    }
+                };
+            }
+            
             loginModal.style.display = 'block';
         }
         
         function closeLoginModal() {
-            loginModal.style.display = 'none';
-            loginForm.reset();
+            if (loginModal) {
+                loginModal.style.display = 'none';
+                loginForm.reset();
+            }
         }
-        
-        loginCloseBtn.onclick = closeLoginModal;
         
         // 修复点击事件委托
         document.addEventListener('click', function(event) {
-            if (event.target === loginModal) {
+            if (event.target.id === 'loginModal') {
                 closeLoginModal();
-            } else if (event.target === modal) {
+            } else if (event.target.id === 'addModal') {
                 closeAddModal();
             }
         });
-        
-        // 登录功能
-        loginForm.onsubmit = function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (login(username, password)) {
-                isLoggedIn = true;
-                localStorage.setItem('isLoggedIn', 'true');
-                updateLoginStatus();
-                closeLoginModal();
-                // 重新渲染所有列表，显示操作按钮
-                for (let i = 1; i <= 4; i++) {
-                    renderUrlList(`tab${i}`);
-                }
-                alert('登录成功！');
-            } else {
-                alert('用户名或密码错误！');
-            }
-        };
         
         // 退出功能
         function logout() {
@@ -700,10 +709,8 @@
             alert('已退出登录！');
         }
         
-        // 添加网址模态框控制
-        const modal = document.getElementById('addModal');
-        const closeBtn = document.getElementsByClassName('close')[1];
-        const addUrlForm = document.getElementById('addUrlForm');
+        // 添加网址模态框相关变量
+        let modal, closeBtn, addUrlForm;
         let currentTab = '';
         
         function openAddModal(tab) {
@@ -711,45 +718,58 @@
                 alert('请先登录！');
                 return;
             }
+            
+            // 确保DOM已加载
+            if (!modal) {
+                modal = document.getElementById('addModal');
+                closeBtn = modal.querySelector('.close');
+                addUrlForm = document.getElementById('addUrlForm');
+                
+                // 绑定关闭事件
+                closeBtn.onclick = closeAddModal;
+                
+                // 绑定表单提交事件
+                addUrlForm.onsubmit = function(e) {
+                    e.preventDefault();
+                    
+                    if (!isLoggedIn) return;
+                    
+                    const urlName = document.getElementById('urlName').value;
+                    const urlDesc = document.getElementById('urlDesc').value;
+                    const urlLink = document.getElementById('urlLink').value;
+                    const tabId = document.getElementById('currentTab').value;
+                    
+                    // 添加新网址
+                    if (!currentUrls[tabId]) {
+                        currentUrls[tabId] = [];
+                    }
+                    currentUrls[tabId].push({ name: urlName, desc: urlDesc, link: urlLink });
+                    
+                    // 保存到localStorage
+                    saveDataToLocal(currentUrls);
+                    
+                    // 重新渲染列表
+                    renderUrlList(tabId);
+                    
+                    // 关闭模态框
+                    closeAddModal();
+                    alert('添加成功！');
+                };
+            }
+            
             currentTab = tab;
             document.getElementById('currentTab').value = tab;
             modal.style.display = 'block';
         }
         
         function closeAddModal() {
-            modal.style.display = 'none';
-            addUrlForm.reset();
+            if (modal) {
+                modal.style.display = 'none';
+                addUrlForm.reset();
+            }
         }
         
-        closeBtn.onclick = closeAddModal;
-        
-        // 添加网址功能
-        addUrlForm.onsubmit = function(e) {
-            e.preventDefault();
-            
-            if (!isLoggedIn) return;
-            
-            const urlName = document.getElementById('urlName').value;
-            const urlDesc = document.getElementById('urlDesc').value;
-            const urlLink = document.getElementById('urlLink').value;
-            const tabId = document.getElementById('currentTab').value;
-            
-            // 添加新网址
-            if (!currentUrls[tabId]) {
-                currentUrls[tabId] = [];
-            }
-            currentUrls[tabId].push({ name: urlName, desc: urlDesc, link: urlLink });
-            
-            // 保存到localStorage
-            saveDataToLocal(currentUrls);
-            
-            // 重新渲染列表
-            renderUrlList(tabId);
-            
-            // 关闭模态框
-            closeAddModal();
-            alert('添加成功！');
-        };
+        // 添加网址模态框相关事件在openAddModal函数内绑定
     </script>
 </body>
 </html>
